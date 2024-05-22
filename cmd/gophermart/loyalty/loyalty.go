@@ -2,13 +2,20 @@ package loyalty
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
 	"sort"
 	"time"
 )
 
+type Order struct {
+	Number     string    `json:"number"`
+	Status     string    `json:"status"`
+	Accrual    int       `json:"accrual,omitempty"`
+	UploadedAt time.Time `json:"uploaded_at"`
+}
+
 func UploadOrderHandler(w http.ResponseWriter, r *http.Request) {
-	// var order models.Order
 	// Проверка аутентификации пользователя
 	if !isAuthenticated(r) {
 		http.Error(w, "User not authenticated", http.StatusUnauthorized)
@@ -21,8 +28,14 @@ func UploadOrderHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Парсинг номера заказа из тела запроса
-	orderNumber := r.FormValue("order_number")
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, "Failed to read request body", http.StatusInternalServerError)
+		return
+	}
+	orderNumber := string(body)
+
+	// Проверка наличия номера заказа в теле запроса
 	if orderNumber == "" {
 		http.Error(w, "Order number is required", http.StatusBadRequest)
 		return
@@ -46,13 +59,6 @@ func UploadOrderHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
-
-type Order struct {
-	Number     string    `json:"number"`
-	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual,omitempty"`
-	UploadedAt time.Time `json:"uploaded_at"`
-}
 
 // GetOrdersHandler обработчик для получения списка заказов пользователя
 func GetOrdersHandler(w http.ResponseWriter, r *http.Request) {
